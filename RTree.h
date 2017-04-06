@@ -22,11 +22,11 @@ public:
     struct NEntry;
     static int const MINNODES = TMINNODES;
     static int const MAXNODES = TMAXNODES;
-public:
+//public:
     RTree()     { this->root = nullptr; this->high= 0;}
     ~RTree(){}
     //bool insert(NMbr m_mbr, DATATYPE m_data);
-    bool Insert(ELEMTYPE a_min[NUMDIMS], ELEMTYPE a_max[NUMDIMS], DATATYPE data);
+    bool Insert(const ELEMTYPE a_min[NUMDIMS],const ELEMTYPE a_max[NUMDIMS], DATATYPE data);
 private:
     /// Insert Methods
     RNode* chooseLeaf(NMbr mbr){
@@ -55,7 +55,7 @@ private:
 
     void splitNode(RNode& L, RNode& LL, NEntry* newEntry);
     void pickSeeds(int* seed1, int* seed2, vector<NEntry>& entries);
-    void pickNext(int* next, NMbr* L, NMbr* LL, vector<NEntry>& entries);
+    void pickNext(int* next, NMbr* L, NMbr* LL, vector<NEntry> entries);
     bool adjustTree(RNode* L, RNode* LL);
     int findEntry(RNode* N, RNode* parent);
 
@@ -67,7 +67,8 @@ public:
     struct NMbr{
         ELEMTYPE m_min[NUMDIMS];                      ///< Min dimensions of bounding box
         ELEMTYPE m_max[NUMDIMS];                      ///< Max dimensions of bounding box
-        NMbr(ELEMTYPE min[NUMDIMS], ELEMTYPE max[NUMDIMS]){
+        NMbr(ELEMTYPE min[NUMDIMS],ELEMTYPE max[NUMDIMS]){
+            //m_min = new int[NUMDIMS]; m_max = new int[NUMDIMS];
             m_min = min;
             m_max = max;
         }
@@ -129,8 +130,13 @@ public:
 };
 
 RTREE_TEMPLATE
-bool RTREE_QUAL::Insert(ELEMTYPE *a_min, ELEMTYPE *a_max, DATATYPE data) {
-    NMbr* mbr = new NMbr(a_min,a_max);
+bool RTREE_QUAL::Insert(const ELEMTYPE a_min[], const ELEMTYPE a_max[], DATATYPE data) {
+    ELEMTYPE* min= new ELEMTYPE[NUMDIMS];
+    min = const_cast<int*>(a_min);
+    ELEMTYPE* max= new ELEMTYPE[NUMDIMS];
+    max = const_cast<int*>(a_max);
+
+    NMbr* mbr = new NMbr(min,max);
     RNode* choosedLeaf = chooseLeaf(*mbr);
     NEntry* entry = new NEntry(data, mbr);
     if ( choosedLeaf->m_count < MAXNODES){     /// aun tenemos espacio para insertar m_data
@@ -192,7 +198,7 @@ RNode* RTREE_QUAL::chooseLeaf(RTree::NMbr mbr){
 */
 
 RTREE_TEMPLATE
-void RTREE_QUAL::splitNode(RTree::RNode& L, RTree::RNode& LL, RTree::NEntry *newEntry) {
+void RTREE_QUAL::splitNode(RNode& L, RNode& LL, NEntry *newEntry) {
     vector<NEntry> entries;
     for(int i=0; i< L.m_count; ++i)
         entries.push_back(L.m_entry[i]);
@@ -266,7 +272,7 @@ void RTREE_QUAL::splitNode(RTree::RNode& L, RTree::RNode& LL, RTree::NEntry *new
 }
 
 RTREE_TEMPLATE
-void RTREE_QUAL::pickSeeds(int* seed1, int* seed2, vector<RTree::NEntry> &entries) {
+void RTREE_QUAL::pickSeeds(int* seed1, int* seed2, vector<NEntry> &entries) {
     float maxEnlargement, tmpEnlargement;
     maxEnlargement = entries[0].m_mbr.calEnlargement(entries[1].m_mbr) - entries[0].m_mbr.calArea();
     for(int i=0; i<entries.size(); ++i){
@@ -282,7 +288,7 @@ void RTREE_QUAL::pickSeeds(int* seed1, int* seed2, vector<RTree::NEntry> &entrie
 }
 
 RTREE_TEMPLATE
-void RTREE_QUAL::pickNext(int *next, RTree::NMbr *L, RTree::NMbr *LL, vector<RTree::NEntry> &entries) {
+void RTREE_QUAL::pickNext(int *next, NMbr *L, NMbr *LL, vector<NEntry> entries) {
     float d1 = L->calEnlargement(entries[0].m_mbr) - L->calArea();
     float d2 = LL->calEnlargement(entries[0].m_mbr) - LL->calArea();
     float increase = d2 <d1 ? d2-d1: d1-d2;
@@ -299,7 +305,7 @@ void RTREE_QUAL::pickNext(int *next, RTree::NMbr *L, RTree::NMbr *LL, vector<RTr
 }
 
 RTREE_TEMPLATE
-bool RTREE_QUAL::adjustTree(RTree::RNode *L, RTree::RNode *LL){
+bool RTREE_QUAL::adjustTree(RNode *L, RNode *LL){
     bool rootSplited =false;       /// suponemos que no habra particion de nodo
 
     RNode* N = L;
@@ -342,7 +348,7 @@ bool RTREE_QUAL::adjustTree(RTree::RNode *L, RTree::RNode *LL){
 }
 
 RTREE_TEMPLATE
-int RTREE_QUAL::findEntry(RTree::RNode *N, RTree::RNode* Parent) {
+int RTREE_QUAL::findEntry(RNode *N, RNode* Parent) {
     for(int i=0; i< Parent->m_count; ++i ){
         if( Parent->m_entry[i].m_child == N )
             return i; // retorna el indice en el que se encuentra
@@ -364,7 +370,7 @@ float RTREE_QUAL::NMbr::calArea(){
 }
 
 RTREE_TEMPLATE
-float RTREE_QUAL::NMbr::calEnlargement(RTree::NMbr mbr) {
+float RTREE_QUAL::NMbr::calEnlargement(NMbr mbr) {
     float enlargement;
     int max, min;
     for(int i=0; i< NUMDIMS; ++i){
@@ -376,7 +382,7 @@ float RTREE_QUAL::NMbr::calEnlargement(RTree::NMbr mbr) {
 }
 
 RTREE_TEMPLATE
-void RTREE_QUAL::NMbr::updateMBR(RTree::NMbr* mbr) {
+void RTREE_QUAL::NMbr::updateMBR(NMbr* mbr) {
     for(int i=0; i<NUMDIMS; ++i){
         this->m_min[i] = this->m_min[i] < mbr->m_min[i] ? this->m_min[i]: mbr->m_min[i];
         this->m_max[i] = this->m_max[i] < mbr->m_max[i] ? this->m_max[i]: mbr->m_max[i];
@@ -385,7 +391,7 @@ void RTREE_QUAL::NMbr::updateMBR(RTree::NMbr* mbr) {
 
 ///<<<< ENTRY_METHODS
 RTREE_TEMPLATE
-void RTREE_QUAL::NEntry::updateMBR(RTree::RNode *node) {
+void RTREE_QUAL::NEntry::updateMBR(RNode *node) {
     /// Actualizamos el MBR de la entrada con todos los MBRs de todos los Entries de node
     for(int i=0; i<node->m_count; ++i)
         this->m_mbr->updateMBR(node->m_entry[i].m_mbr);
